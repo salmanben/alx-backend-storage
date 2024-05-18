@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""
-mod doc
-"""
+"""Updates a document"""
 
 
 def update_topics(mongo_collection, name, topics):
-    """
-    func doc
-    """
-    mongo_collection.update_many({"name": name}, {"$set": {"topics": topics}})
+    """ Function that updates a doc with topics """
+    mongo_collection.update_many({'name': name}, {
+        '$set': {
+            'topics': topics
+        }
+    })

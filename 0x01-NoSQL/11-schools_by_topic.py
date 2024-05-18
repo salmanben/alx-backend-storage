@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""
-mod doc
-"""
+"""queries a collection"""
 
 
 def schools_by_topic(mongo_collection, topic):
-    """
-    func doc
-    """
-    return mongo_collection.find({"topics": topic})
+    """ Finds school with specific topic """
+    found = mongo_collection.find({'topics': topic})
+    return list(found)

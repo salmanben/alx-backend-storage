@@ -1,47 +1,36 @@
 #!/usr/bin/env python3
-"""queries a collection and prints the results"""
+""" Python script that provides some stats about Nginx logs stored in MongoDB
+    Database: logs
+    Collection: nginx
+    Display (same as the example):
+        first line: x logs where x is the number of docs in this collection
+        second line: Methods:
+        5 lines with the number of documents with the method =
+        ["GET", "POST", "PUT", "PATCH", "DELETE"] in this order
+        one line with the number of documents with:
+            method=GET
+            path=/status
+ """
 from pymongo import MongoClient
 
 
-def connect_db():
-    """Connect DB"""
-    db_client = MongoClient('mongodb://127.0.0.1:27017')
-    logs_db = db_client.logs
-    nginx_col = logs_db.nginx
-    return nginx_col
+if __name__ == "__main__":
+    client = MongoClient('mongodb://localhost:27017')
+    collection = client.logs.nginx
 
-
-def print_results(methods=None):
-    """ Print results from logs """
-    if methods is None:
-        methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
-    db = connect_db()
-    print(db.count_documents({}), 'logs', '\nMethods:')
+    print("{} logs".format(collection.count_documents({})))
+    print("Methods:")
+    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
     for method in methods:
-        to_print = db.count_documents({'method': method})
-        print(f'\tmethod {method}: {to_print}')
-    print(db.count_documents(
-        {'method': 'GET', 'path': '/status'}), 'status check'
-    )
+        print("\tmethod {}: {}".format(method, collection.count_documents({"method": method})))
+    print("{} status check".format(
+        collection.count_documents({"path": "/status"})))
 
-    pipeline = [
-        {
-            '$group': {
-                '_id': '$ip',
-                'sum': {'$sum': 1}
-            }
-        },
-        {
-            '$sort': {'sum': -1}
-        },
-        {
-            '$limit': 10
-        }
-    ]
-
-    top = db.aggregate(pipeline)
-    print('IPs:')
-    [print(f'\t{obj["_id"]}: {obj["sum"]}') for obj in top]
-
-
-print_results()
+    print("IPs:")
+    ips = collection.aggregate([
+        {"$group": {"_id": "$ip", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ])
+    for ip in ips:
+        print("\t{}: {}".format(ip.get("_id"), ip.get("count")))

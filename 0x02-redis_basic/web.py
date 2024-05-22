@@ -1,46 +1,29 @@
 #!/usr/bin/env python3
-""" A module for a cache instance """
+""" implements a get_page function (prototype: def get_page(url: str) -> str:)
+    The core of the function is very simple. It uses the requests module to
+    obtain the HTML content of a particular URL and returns it.
+
+    get_page tracks how many times a particular URL was accessed in the key
+    "count:{url}" and cache the respult with an expiration time of 10 seconds.
+
+    Bonus: implement this use case with decorators.
+"""
+import redis
 import requests
-from redis import Redis
-from functools import wraps
 from typing import Callable
+from functools import wraps
 
-redis_client = Redis()
-
-
-def cache_data(method: Callable[..., str]) -> Callable[..., str]:
-    """ Decorator to cache with expiry """
-
-    @wraps(method)
-    def wrapper(url: str, *args, **kwd) -> str:
-        """ Wrapper function """
-        key = f"cache:{url}"
-        get_data = redis_client.get(key)
-        res = method(url, *args, **kwd)
-        if get_data:
-            return res
-        redis_client.setex(key, 10, res)
-        return res
-
-    return wrapper
+count = 0
+cache = redis.Redis()
 
 
-def count_calls(method: Callable[..., str]) -> Callable[..., str]:
-    """ Decorator to count how many times a method is called """
-
-    @wraps(method)
-    def wrapper(url: str, *args, **kwd) -> str:
-        """ Wrapper function """
-        key = f"count:{url}"
-        redis_client.incr(key, 1)
-        return method(url, *args, **kwd)
-
-    return wrapper
-
-
-@cache_data
-@count_calls
 def get_page(url: str) -> str:
-    """obtain the HTML content of a particular URL and returns it."""
-    res = requests.get(url)
-    return res.text
+    """Obtains the HTML content of a particular URL and returns it.
+    Tracks how many times the URL was accessed and storesp this
+    count in a Redis cache.
+    """
+    cache.set(f"cached:{url}", count)
+    response = requests.get(url)
+    cache.incr(f"count:{url}")
+    cache.setex(f"count:{url}", 10, cache.get(f"cached:{url}"))
+    return response.text
